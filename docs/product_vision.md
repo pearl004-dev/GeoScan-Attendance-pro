@@ -1,7 +1,7 @@
 # Project Name: GeoScan Attendance Pro
 
 ## Problem Statement
-- Taking attendance by hand takes too much ime nad it is easy to make mistakes. It is also easy for studebnts to cheat by signing the register for friends who are not actually in class.Lecturers do noy have a fast automatic way to check who is reallu there without stopping their lesson.
+- Taking attendance by hand takes too much time and it is easy to make mistakes. It is also easy for studebnts to cheat by signing the register for friends who are not actually in class.Lecturers do noy have a fast automatic way to check who is reallu there without stopping their lesson.
 
 ## Target Users 
 - **Students:** Users who need a quick and an advanced way to register their presence
