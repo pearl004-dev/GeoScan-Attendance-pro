@@ -1,3 +1,4 @@
+**Meeting 1**
 - **Date:** March 17, 2026 
 - **Time:** 3:07 PM - 3:41 PM
 - **Venue:** Online/Microsoft Teams 
@@ -14,7 +15,7 @@
  - **Ntombikayise** - Researcher
  - **Siphuxolo** - Tester
  - **Lizalise** - UI/UX Designer 
-### **AcƟon Items & Assignments**
+### **Action Items & Assignments**
 | Task | Assigned To | Deadline | 
 |------|------------|----------| 
 | Set up GitHub | Pearl | 19 March 2026 | 
