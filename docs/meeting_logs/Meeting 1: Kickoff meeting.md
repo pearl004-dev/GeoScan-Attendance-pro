@@ -1,7 +1,7 @@
 - **Date:** March 17, 2026 
 - **Time:** 3:07 PM - 3:41 PM
 - **Venue:** Online/Microsoft Teams 
-- **AƩendance:** Pearl, Ntombikayise, Siphuxolo, Lizalise
+- **Attendance:** Pearl, Ntombikayise, Siphuxolo, Lizalise
 - **Absent:** Lehutso
 - ### **Agenda & Topics Discussed** 
 1. **Team Roles**
