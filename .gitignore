@@ -1,0 +1,21 @@
+# Node.js backend
+node_modules/
+*.log
+npm-debug.log*
+
+# Frontend build/output
+dist/
+build/
+
+# MySQL dumps (if exporting)
+*.sql
+dump.sql
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor files
+.vscode/
+.idea/
+
