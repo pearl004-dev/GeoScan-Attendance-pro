@@ -2,7 +2,7 @@
 
 
 
-The sprint backlog for the Geo Scan Attendance Pro system was created by identifying the main features of the system and breaking them down into smaller, manageable tasks. These features include user authentication, QR code generation and scanning, geolocation verification, attendance recording, and reporting.
+The sprint backlog for the Geo Scan Attendance Pro system was created by identifying the main features of the system and breaking them down into smaller and manageable tasks. These features include user authentication, QR code generation and scanning, geolocation verification, attendance recording, and reporting.
 
 Each task has been assigned to a team member, given a time estimate, and distributed across three sprints. This helps the team stay organized, track progress, and ensure that all key components of the system are developed efficiently.
 
