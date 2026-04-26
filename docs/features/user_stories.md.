@@ -9,3 +9,6 @@
 -	As a lecturer, I want the QR code to expire automatically after a session so that attendance is only marked during the correct time.
 -	As a lecturer, I want to see real-time attendance logs so that I can monitor which students are present during the lecture.
 -	As a lecturer, I want to view attendance records for each session so that I can keep accurate reports.
+- As a university administrator, I want to view attendance analytics so that I can monitor overall student attendance trends.
+- As a university administrator, I want access to attendance reports so that I can support academic decision-making.
+- As a university administrator, I want to manage user accounts (students and lecturers) so that the system remains organized and up to date.
