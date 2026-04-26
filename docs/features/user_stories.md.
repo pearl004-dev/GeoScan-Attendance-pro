@@ -1,0 +1,11 @@
+# User Stories
+-	As a student, I want to log in to the system using my student ID or email so that I can securely access my dashboard.
+-	As a student, I want to scan a QR code to mark my attendance so that I can quickly register my presence in class.
+-	As a student, I want the system to verify my GPS location so that I can only mark attendance when I am physically in the classroom.
+-	As a student, I want to receive a confirmation message after scanning so that I know my attendance was successfully recorded.
+-	As a student, I want to view my attendance history so that I can track my participation over time.
+-	As a lecturer, I want to log in to the system so that I can manage attendance for my classes.
+-	As a lecturer, I want to generate a dynamic QR code for each class session so that students cannot reuse old codes.
+-	As a lecturer, I want the QR code to expire automatically after a session so that attendance is only marked during the correct time.
+-	As a lecturer, I want to see real-time attendance logs so that I can monitor which students are present during the lecture.
+-	As a lecturer, I want to view attendance records for each session so that I can keep accurate reports.
