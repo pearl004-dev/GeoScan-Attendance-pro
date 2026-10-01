@@ -1,0 +1,314 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: lightgray;
+}
+
+.login-card {
+  width: 380px;
+  padding: 35px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: blue;
+}
+
+.subtitle {
+  color: gray;
+  margin-bottom: 30px;
+}
+
+.login-card h2 {
+  margin-bottom: 25px;
+  color: black;
+}
+
+.form-group {
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-weight: 600;
+  color: black;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid gray;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: blue;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-button:hover {
+  background: darkblue;
+}
+
+.register-text {
+  margin-top: 22px;
+  color: gray;
+}
+
+.register-button {
+  border: none;
+  background: none;
+  color: blue;
+  cursor: pointer;
+  font-weight: bold;
+}
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid gray;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 15px;
+  background: white;
+  color:black;
+}
+
+
+/* =========================
+   DASHBOARD
+   ========================= */
+
+.dashboard {
+  min-height: 100vh;
+  display: flex;
+  background: #f1f5f9;
+}
+
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: #1e293b;
+  padding: 25px 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar nav button {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  padding: 12px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.sidebar nav button:hover {
+  background: #334155;
+  color: white;
+}
+
+.logout-button {
+  margin-top: auto;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.logout-button:hover {
+  background: #b91c1c;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.dashboard-content h1 {
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.dashboard-welcome {
+  color: #64748b;
+  margin-bottom: 30px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card h3 {
+  color: #64748b;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.stat-card p {
+  color: #1d4ed8;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.dashboard-section {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-section h2 {
+  color: #1e293b;
+  margin-bottom: 20px;
+}
+
+.class-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.class-card h3 {
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.class-card p {
+  color: #64748b;
+}
+
+.action-button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.action-button:hover {
+  background: #1d4ed8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  color: #475569;
+}
+
+td {
+  color: #334155;
+}
+
+.present {
+  color: #16a34a;
+  font-weight: bold;
+}
+
+.absent {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+@media (max-width: 800px) {
+  .sidebar {
+    width: 190px;
+  }
+
+  .dashboard-content {
+    padding: 25px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .logout-button {
+    margin-top: 20px;
+  }
+
+  .dashboard-content {
+    padding: 20px;
+  }
+}
