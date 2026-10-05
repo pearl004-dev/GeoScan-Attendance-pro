@@ -23,3 +23,9 @@ __pycache__/
 *._pyc
 db.sqlite3
 
+# Environment variables
+backend/.env
+
+# Database backups
+*.dump
+
