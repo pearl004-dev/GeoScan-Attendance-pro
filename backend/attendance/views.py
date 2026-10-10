@@ -7,7 +7,6 @@ from users.models import User
 
 
 class AttendanceSessionView(APIView):
-
     def post(self, request):
         class_name = request.data.get('class_name')
         date = request.data.get('date')
@@ -30,14 +29,14 @@ class AttendanceSessionView(APIView):
         return Response(
             {
                 "message": "Attendance session created successfully.",
-                "session_id": session.id
+                "session_id": session.id,
+                "qr_token": str(session.qr_token)
             },
             status=status.HTTP_201_CREATED
         )
 
 
 class AttendanceRecordView(APIView):
-
     def post(self, request):
         session_id = request.data.get('session_id')
         student_id = request.data.get('student_id')

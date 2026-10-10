@@ -3,6 +3,8 @@ import "./App.css";
 
 function App() {
   const [showRegister, setShowRegister] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   if (showRegister) {
     return (
@@ -14,49 +16,38 @@ function App() {
 
           <h2>Register</h2>
 
-          <form onSubmit={(event) => {
-            event.preventDefault();
-            alert("Registration form submitted!");
-          }}>
-
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              alert("Registration form submitted!");
+            }}
+          >
             <div className="form-group">
               <label>Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-              />
+              <input type="text" placeholder="Enter your full name" />
             </div>
 
             <div className="form-group">
               <label>Username</label>
-              <input
-                type="text"
-                placeholder="Choose a username"
-              />
+              <input type="text" placeholder="Choose a username" />
             </div>
 
             <div className="form-group">
               <label>Email</label>
-              <input
-                type="email"
-                placeholder="Enter your email"
-              />
+              <input type="email" placeholder="Enter your email" />
             </div>
             <div className="form-group">
-  <label>Role</label>
-  <select>
-    <option>Student</option>
-    <option>Lecturer</option>
-    <option>Administrator</option>
-  </select>
-</div>
+              <label>Role</label>
+              <select>
+                <option>Student</option>
+                <option>Lecturer</option>
+                <option>Administrator</option>
+              </select>
+            </div>
 
             <div className="form-group">
               <label>Password</label>
-              <input
-                type="password"
-                placeholder="Create a password"
-              />
+              <input type="password" placeholder="Create a password" />
             </div>
 
             <button className="login-button" type="submit">
@@ -64,9 +55,7 @@ function App() {
             </button>
           </form>
 
-          <p className="register-text">
-            Already have an account?
-          </p>
+          <p className="register-text">Already have an account?</p>
 
           <button
             className="register-button"
@@ -91,22 +80,53 @@ function App() {
         <div className="form-group">
           <label>Login as</label>
           <select>
-  <option value="student">Student</option>
-  <option value="lecturer">Lecturer</option>
-  <option value="admin">Administrator</option>
-</select>
+            <option value="student">Student</option>
+            <option value="lecturer">Lecturer</option>
+            <option value="admin">Administrator</option>
+          </select>
         </div>
 
-        <form onSubmit={(event) => {
-          event.preventDefault();
-          alert("Login form submitted!");
-        }}>
-          
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+
+            try {
+              const response = await fetch(
+                "http://127.0.0.1:8000/api/users/login/",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    username: username,
+                    password: password,
+                  }),
+                },
+              );
+
+              const data = await response.json();
+
+              if (response.ok) {
+                alert("Login successful!");
+                console.log(data);
+              } else {
+                alert(data.error || "Login failed.");
+                console.log(data);
+              }
+            } catch (error) {
+              alert("Could not connect to the server.");
+              console.error(error);
+            }
+          }}
+        >
           <div className="form-group">
             <label>Username</label>
             <input
               type="text"
               placeholder="Enter your username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
             />
           </div>
 
@@ -115,6 +135,8 @@ function App() {
             <input
               type="password"
               placeholder="Enter your password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
           </div>
 
@@ -123,9 +145,7 @@ function App() {
           </button>
         </form>
 
-        <p className="register-text">
-          Don't have an account?
-        </p>
+        <p className="register-text">Don't have an account?</p>
 
         <button
           className="register-button"

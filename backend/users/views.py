@@ -1,10 +1,8 @@
-from django.shortcuts import render
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-
 from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 
 from .models import User
 
@@ -66,9 +64,12 @@ def login_user(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
 
+    token, created = Token.objects.get_or_create(user=user)
+
     return Response(
         {
             'message': 'Login successful.',
+            'token': token.key,
             'username': user.username,
             'role': user.role
         },
