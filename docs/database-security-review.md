@@ -1,246 +1,140 @@
-\# GeoScan Attendance Pro — Database Security Review
+﻿# GeoScan Attendance Pro — Database Security Review
 
+**Prepared by:** Person 2 — Database Security Review and Testing
 
+**Status:** Code review and initial isolated security tests completed
 
-\*\*Prepared by:\*\* Person 2 — Database Security Review and Testing  
+**Branch:** `database/security-testing`
 
-\*\*Status:\*\* Initial code review  
+## 1. Objective
 
-\*\*Branch:\*\* `database/security-testing`
+This review evaluates potential security weaknesses in the GeoScan Attendance Pro database integration, user authentication, attendance-management code, and configuration.
 
+All executed API tests used a local PostgreSQL test database named `geoscan_security_test`. No shared Supabase schema, policies, permissions, or data were changed.
 
+## 2. Findings
 
-\## 1. Objective
+### Finding 1: Public registration allows privileged roles
 
+**Priority:** High — confirmed
 
+**Evidence:** A registration request supplying the role `ADMIN` returned HTTP 201. A subsequent read-only database query confirmed that the account `security_test_admin` was stored with role `ADMIN`.
 
-The purpose of this review is to identify potential security weaknesses in the GeoScan Attendance Pro database integration, user authentication, and attendance-management code.
+**Risk:** An unauthorised person could potentially obtain administrator privileges through public registration.
 
+**Recommendation:** Public registration should assign `STUDENT` on the server and must not allow clients to assign privileged roles. Lecturer and administrator accounts should be provisioned through an authorised process.
 
+**Status:** Confirmed by isolated API testing and database verification. Fix not yet implemented.
 
-The review is read-only. No changes have been made to the shared Supabase database.
+### Finding 2: Duplicate attendance records lack a database constraint
 
+**Priority:** Medium–High
 
+**Evidence:** The attendance view checks for an existing record before creating one, but the inspected `AttendanceRecord` model does not declare a uniqueness constraint on `(session, student)`.
 
-\## 2. Findings
+**Risk:** Concurrent requests could both pass the application-level check and create duplicate attendance records.
 
+**Recommendation:** Check for existing duplicates and coordinate a database uniqueness constraint on `(session, student)` with the team. Handle integrity errors in the application.
 
+**Status:** Missing constraint confirmed in the inspected model. Concurrent behaviour and existing database data have not been tested.
 
-\### Finding 1: Registration role assignment
+### Finding 3: Attendance access is not scoped to lecturers' classes
 
+**Priority:** Medium — requirements review required
 
+**Evidence:** The inspected GET views allow users with `LECTURER` or `ADMIN` roles to retrieve all attendance sessions and records. Student requests were denied.
 
-\*\*Priority:\*\* High — requires verification
+**Risk:** Lecturers may access information beyond the classes assigned to them if the intended policy requires class-level restrictions.
 
+**Recommendation:** Confirm access requirements with the team and restrict lecturers to their authorised sessions and records where appropriate.
 
+**Status:** Global retrieval behaviour confirmed by code inspection. Lecturer-specific access has not yet been tested.
 
-The registration endpoint accepts a role from the client's request and passes it to `User.objects.create\_user()`.
+### Finding 4: Authentication token management requires further review
 
+**Priority:** Medium — further review required
 
+**Evidence:** The login endpoint returned HTTP 200 and a token for the local student test account. Authenticated requests using that token reached the attendance permission checks.
 
-\*\*Risk:\*\* A user may be able to register with the `ADMIN` or `LECTURER` role if no other validation prevents it.
+**Risk:** Inadequate token revocation, storage, or transmission controls could allow continued unauthorised account access.
 
+**Recommendation:** Review token revocation, logout behaviour, secure storage and transmission, and procedures for compromised accounts.
 
+**Status:** Token issuance confirmed. Revocation and storage controls remain unverified.
 
-\*\*Recommendation:\*\* Assign `STUDENT` by default during public registration. Allow privileged roles to be assigned only through an authorised administrative process.
+### Finding 5: GPS data integrity requires further verification
 
+**Priority:** Medium — further review required
 
+**Evidence:** Student GPS fields allow null values in the inspected model. The attendance view validates submitted coordinates and calculates distance from the classroom location.
 
-\*\*Status:\*\* Potential vulnerability identified in code review; safe testing required.
+**Risk:** Missing or inaccurate stored coordinates could affect attendance verification or auditing if not handled appropriately.
 
+**Recommendation:** Verify that attendance submissions require valid coordinates, inspect the classroom-coordinate migration and existing data, and confirm appropriate handling of missing GPS values.
 
+**Status:** Model and validation code inspected. Dedicated GPS tests and existing-data verification remain outstanding.
 
-\### Finding 2: Duplicate attendance records
+### Finding 6: Production configuration requires review
 
+**Priority:** High if these settings are used in production
 
+**Evidence:** The inspected `config/settings.py` contains `DEBUG = True` and `ALLOWED_HOSTS = []`. Django's system check reported no issues.
 
-\*\*Priority:\*\* Medium–High
+**Risk:** Debug mode can expose sensitive technical details in production. Hostnames must be configured correctly for the deployed environment.
 
+**Recommendation:** Disable debug mode in production, configure approved hostnames, and use environment-specific settings or environment variables.
 
+**Status:** Local settings confirmed. Production deployment configuration not verified. The successful Django system check does not establish production security.
 
-The attendance view checks whether a student has already attended a session. However, the inspected model and migrations do not define a database uniqueness constraint on the session and student combination.
+## 3. Executed isolated tests
 
+| Test | Result |
+|---|---|
+| Register with `ADMIN` role | FAIL — privileged registration succeeded (HTTP 201) |
+| Verify stored test account role | FAIL — role stored as `ADMIN` |
+| Unauthenticated GET sessions | PASS — HTTP 401 |
+| Unauthenticated GET records | PASS — HTTP 401 |
+| Register a student test account | PASS — HTTP 201 |
+| Student GET all attendance records | PASS — HTTP 403 |
+| Student GET attendance sessions | PASS — HTTP 403 |
+| Django `manage.py check` | PASS — no system-check issues |
 
+Tests were run against the local `geoscan_security_test` database using disposable test accounts. These results do not establish that every security control has been tested.
 
-\*\*Risk:\*\* Concurrent requests could potentially create duplicate attendance records.
+## 4. Existing security controls observed
 
+- Account creation uses Django's `create_user()` method.
+- Login uses Django's `authenticate()` function.
+- Invalid login credentials receive a general error message.
+- Attendance endpoints require authentication.
+- Role checks restrict session and record retrieval to lecturers and administrators.
+- Attendance submissions use the authenticated user as the student identity.
+- The inspected attendance code validates coordinate ranges, checks QR tokens, verifies the session date and time, and calculates distance from the classroom.
 
+These controls are positive observations, but they do not establish that the entire application is secure.
 
-\*\*Recommendation:\*\* Propose a database uniqueness constraint on `(session, student)` and handle duplicate-record errors in the application.
+## 5. Outstanding tests
 
+1. Verify that invalid login credentials are rejected.
+2. Test that lecturer and administrator permissions match the intended access policy.
+3. Test duplicate attendance submissions and concurrent requests in isolation.
+4. Test missing, invalid, and out-of-range GPS coordinates.
+5. Review token revocation and storage controls.
+6. Verify production settings and deployment configuration.
+7. Check for existing duplicate records before proposing a uniqueness constraint.
+8. Compare the database schema with Django migrations only through an approved, safe connection.
 
+## 6. Change-control precautions
 
-\*\*Status:\*\* Confirmed absence of a constraint in the inspected source; database state and safe implementation require verification.
+- No shared Supabase schema, policies, permissions, or data were changed during these tests.
+- The executed tests used a local test database.
+- No production fixes or schema migrations have been applied as part of this review.
+- Proposed schema changes must be discussed with Person 1 and approved by the team.
+- Existing records must be checked before adding constraints or correcting data.
 
+## 7. Conclusion
 
+Initial isolated testing confirmed a serious registration role-escalation vulnerability: public registration accepted and stored an `ADMIN` role. Unauthenticated access and student access to the protected session and records endpoints were correctly rejected in the tests performed.
 
-\### Finding 3: Attendance data access
-
-
-
-\*\*Priority:\*\* Medium — requirements review required
-
-
-
-The attendance views allow lecturers and administrators to retrieve all attendance sessions and records.
-
-
-
-\*\*Risk:\*\* Lecturers may be able to access information beyond the classes assigned to them, depending on the intended access rules.
-
-
-
-\*\*Recommendation:\*\* Confirm the access requirements with the team and restrict lecturers to authorised sessions and records where appropriate.
-
-
-
-\*\*Status:\*\* Access-control review required.
-
-
-
-\### Finding 4: Authentication token management
-
-
-
-\*\*Priority:\*\* Medium — further review required
-
-
-
-The login endpoint issues or retrieves a DRF authentication token.
-
-
-
-\*\*Risk:\*\* If tokens are not revoked when required or are exposed to unauthorised parties, accounts could remain accessible.
-
-
-
-\*\*Recommendation:\*\* Review logout and token revocation, secure token storage and transmission, and procedures for compromised accounts.
-
-
-
-\*\*Status:\*\* Token issuance confirmed; revocation and storage controls not yet verified.
-
-
-
-\### Finding 5: GPS data integrity
-
-
-
-\*\*Priority:\*\* Medium — further review required
-
-
-
-Student GPS fields allow null values. Classroom coordinates were added in migration `0004` using a temporary default of zero.
-
-
-
-\*\*Risk:\*\* Missing student coordinates or incorrect classroom coordinates could affect attendance verification if not handled correctly.
-
-
-
-\*\*Recommendation:\*\* Confirm that the application requires valid GPS coordinates for attendance and audit existing classroom coordinates before proposing data corrections.
-
-
-
-\*\*Status:\*\* Model and migration findings confirmed; live data requires verification.
-
-
-
-\### Finding 6: Production configuration
-
-
-
-\*\*Priority:\*\* High if insecure settings are used in production
-
-
-
-The inspected settings file contains `DEBUG = True` and `ALLOWED\_HOSTS = \[]`.
-
-
-
-\*\*Risk:\*\* Debug mode can expose sensitive technical information if enabled in production. Host validation must be configured correctly for deployment.
-
-
-
-\*\*Recommendation:\*\* Use environment-specific settings, disable debug mode in production, and configure the permitted hostnames.
-
-
-
-\*\*Status:\*\* Settings observed locally; production deployment configuration not yet verified.
-
-
-
-\## 3. Existing security controls observed
-
-
-
-\- Django's `create\_user()` is used for account creation, supporting Django's password-hashing process.
-
-\- Login uses Django's `authenticate()` function.
-
-\- Login returns a general invalid-credentials message.
-
-\- Attendance endpoints require authentication.
-
-\- Role checks are present in the attendance views.
-
-\- GPS coordinates and attendance distance are validated in the inspected attendance code.
-
-\- Attendance submissions use the authenticated user as the student identity.
-
-
-
-These controls are positive findings but do not establish that the entire application is secure.
-
-
-
-\## 4. Testing plan
-
-
-
-Testing must use an isolated test database and test accounts.
-
-
-
-1\. Verify that public registration cannot grant administrator or lecturer privileges.
-
-2\. Verify that invalid login credentials are rejected.
-
-3\. Verify that unauthenticated users cannot access protected attendance endpoints.
-
-4\. Verify that lecturers cannot access unauthorised classes or attendance records.
-
-5\. Test duplicate attendance submissions, including concurrent requests.
-
-6\. Verify GPS validation and rejection of missing or out-of-range coordinates.
-
-7\. Review token revocation and production configuration.
-
-8\. Compare the live schema with the Django migrations once an approved, safe connection is available.
-
-
-
-\## 5. Change-control precautions
-
-
-
-\- No shared Supabase schema, policies, or permissions were changed during this review.
-
-\- No migrations or test records were applied to the shared database.
-
-\- Proposed database changes must be discussed with Person 1 and approved by the team.
-
-\- Existing records must be checked before adding constraints or correcting data.
-
-
-
-\## 6. Conclusion
-
-
-
-The initial review identified potential weaknesses involving registration role assignment, duplicate attendance prevention, access control, token management, GPS data integrity, and production configuration.
-
-
-
-Further isolated testing and team review are required before implementing fixes. Findings must be updated as verification is completed.
+The review also identified a missing database-level duplicate-attendance constraint and configuration and data-access issues requiring further review. Findings should be retested after approved fixes. No claim is made that the application is fully secure.
 
