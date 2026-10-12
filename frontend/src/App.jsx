@@ -12,6 +12,17 @@ function App() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [createdSession, setCreatedSession] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  async function readResponse(response) {
+    const text = await response.text();
+
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error("Unexpected server response. Check the backend.");
+    }
+  }
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -31,14 +42,14 @@ function App() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed.");
+        throw new Error(data.error || data.detail || "Login failed.");
       }
 
       if (data.role !== loginRole) {
-        throw new Error("Please select the correct role for this account.");
+        throw new Error("Please select the correct role.");
       }
 
       setUser({
@@ -58,7 +69,8 @@ function App() {
     setMessage("");
     setLoading(true);
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
 
     try {
       const response = await fetch(`${API}/users/register/`, {
@@ -73,14 +85,17 @@ function App() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (!response.ok) {
-        throw new Error(data.error || "Registration failed.");
+        throw new Error(
+          data.error || data.detail || "Registration failed."
+        );
       }
 
-      setMessage("Account created successfully. Please log in.");
       setShowRegister(false);
+      setMessage("Account created successfully. Please log in.");
+      formElement.reset();
     } catch (err) {
       setError(err.message || "Cannot connect to the server.");
     } finally {
@@ -91,469 +106,660 @@ function App() {
   function logout() {
     setUser(null);
     setCreatedSession(null);
+    setMenuOpen(false);
     setError("");
     setMessage("");
   }
 
+  async function handleCreateSession(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+
+    const session = {
+      className: form.get("class_name"),
+      date: form.get("date"),
+      startTime: form.get("start_time"),
+      endTime: form.get("end_time"),
+    };
+
+    if (session.endTime <= session.startTime) {
+      setError("End time must be later than start time.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API}/attendance/sessions/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          class_name: session.className,
+          date: session.date,
+          start_time: session.startTime,
+          end_time: session.endTime,
+        }),
+      });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.detail || "Could not create session."
+        );
+      }
+
+      setCreatedSession({
+        id: data.session_id ?? data.id ?? "N/A",
+        ...session,
+      });
+
+      setMessage(data.message || "Session created successfully.");
+      formElement.reset();
+    } catch (err) {
+      setError(err.message || "Cannot connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function scrollToSection(id) {
+    setMenuOpen(false);
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  function NavButton({ section, icon, children }) {
+    return (
+      <button
+        type="button"
+        className="sidebar-link"
+        onClick={() => scrollToSection(section)}
+      >
+        <span className="sidebar-link-icon">{icon}</span>
+        <span>{children}</span>
+      </button>
+    );
+  }
+
+  // DASHBOARDS
   if (user) {
     return (
       <div className="dashboard">
-        <aside className="sidebar">
-          <div className="sidebar-logo">GeoScan</div>
-          
+        <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
+          <div className="sidebar-brand">
+            <span className="sidebar-brand-icon">G</span>
+            <div>
+              <strong>GeoScan</strong>
+              <small>Attendance Pro</small>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="menu-toggle"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? "✕ Close Menu" : "☰ Menu"}
+          </button>
+
+          <p className="sidebar-section-title">MAIN MENU</p>
+
           <nav className="sidebar-nav">
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setMessage("");
-                document.getElementById("dashboard-top")?.scrollIntoView({
-                  behavior: "smooth",
-                });
-              }}
-            >
-              <span>⌂</span> Dashboard
-            </button>
+            <NavButton section="dashboard-top" icon="⌂">
+              Dashboard
+            </NavButton>
+
+            {user.role === "STUDENT" && (
+              <NavButton section="attendance-history" icon="▤">
+                Attendance History
+              </NavButton>
+            )}
 
             {user.role === "LECTURER" && (
               <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById("create-session")?.scrollIntoView({
-                      behavior: "smooth",
-                    })
-                  }
-                >
-                  <span>＋</span> Create Session
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById("manage-sessions")?.scrollIntoView({
-                      behavior: "smooth",
-                    })
-                  }
-                >
-                  <span>▤</span> Manage Sessions
-                </button>
+                <NavButton section="create-session" icon="＋">
+                  Create Session
+                </NavButton>
+                <NavButton section="manage-sessions" icon="▤">
+                  Manage Sessions
+                </NavButton>
               </>
             )}
 
-            {user.role === "STUDENT" && (
-              <button
-                type="button"
-                onClick={() =>
-                  document.getElementById("attendance-history")?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-                }
-              >
-                <span>▤</span> Attendance History
-              </button>
+            {user.role === "ADMIN" && (
+              <>
+                <NavButton section="admin-overview" icon="▦">
+                  Overview
+                </NavButton>
+                <NavButton section="admin-users" icon="♙">
+                  User Management
+                </NavButton>
+                <NavButton section="admin-reports" icon="▤">
+                  Attendance Reports
+                </NavButton>
+                <NavButton section="admin-activity" icon="◷">
+                  Recent Activity
+                </NavButton>
+              </>
             )}
           </nav>
 
-          <button className="logout-button" onClick={logout}>
-            Logout
-          </button>
+          <div className="sidebar-bottom">
+            <div className="sidebar-user">
+              <span className="sidebar-user-avatar">
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <strong>{user.username}</strong>
+                <small>{user.role}</small>
+              </div>
+            </div>
+
+            <button
+              className="logout-button"
+              type="button"
+              onClick={logout}
+            >
+              ↪ Logout
+            </button>
+          </div>
         </aside>
 
         <main className="dashboard-content" id="dashboard-top">
-          <h1>
-            {user.role === "STUDENT"
-              ? "Student Dashboard"
-              : "Lecturer Dashboard"}
-          </h1>
-          <p className="dashboard-welcome">
-            Welcome, {user.username}!
-          </p>
+          <header className="dashboard-header">
+            <div className="dashboard-heading">
+              <p className="dashboard-welcome">GEOSCAN ATTENDANCE PRO</p>
+              <h1>
+                {user.role === "STUDENT"
+                  ? "Student Dashboard"
+                  : user.role === "LECTURER"
+                  ? "Lecturer Dashboard"
+                  : "Administrator Dashboard"}
+              </h1>
+              <p className="dashboard-heading-description">
+                Welcome to your attendance management workspace.
+              </p>
+            </div>
 
-          {error && <p className="app-error">{error}</p>}
-          {message && <p className="app-message">{message}</p>}
+            <div className="dashboard-user">
+              <span className="dashboard-avatar">
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <strong>{user.username}</strong>
+                <p>{user.role}</p>
+              </div>
+            </div>
+          </header>
 
-          
-{user.role === "STUDENT" && (
-  <div className="student-dashboard">
-    <section className="dashboard-section student-hero">
-      <p className="student-eyebrow">STUDENT PORTAL</p>
-      <h2>Welcome back, {user.username}!</h2>
-      <p>
-        Manage your attendance and keep track of your classes
-        with GeoScan Attendance Pro.
-      </p>
-    </section>
+          {error && <p className="app-error" role="alert">{error}</p>}
+          {message && <p className="app-message" role="status">{message}</p>}
 
-    <section className="student-stats">
-      <div className="dashboard-section student-stat">
-        <h3>Attendance Records</h3>
-        <p className="student-stat-value">—</p>
-        <p>Records will appear when history is connected.</p>
-      </div>
-
-      <div className="dashboard-section student-stat">
-        <h3>Attendance Rate</h3>
-        <p className="student-stat-value">—</p>
-        <p>Calculated when attendance data is available.</p>
-      </div>
-
-      <div className="dashboard-section student-stat">
-        <h3>Upcoming Classes</h3>
-        <p className="student-stat-value">—</p>
-        <p>Class schedules are not connected yet.</p>
-      </div>
-    </section>
-
-   
-<section className="dashboard-section" id="attendance-history">
-  <h2>My Attendance History</h2>
-  <p>View the classes where your attendance has been recorded.</p>
-
-  <div className="attendance-table-wrapper">
-    <table className="attendance-table">
-      <thead>
-        <tr>
-          <th>Class</th>
-          <th>Date</th>
-          <th>Attendance Time</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <tr>
-          <td colSpan="4" className="attendance-empty-cell">
-            No attendance records available yet.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    
-    <section className="dashboard-section student-quick-actions">
-      <h2>Quick Actions</h2>
-      <p>Choose an action to get started.</p>
-
-      <div className="quick-actions-grid">
-        <button
-          type="button"
-          onClick={() =>
-            setMessage(
-              "QR scanning will be available when the scanner is implemented."
-            )
-          }
-        >
-          <span className="quick-action-icon">▦</span>
-          <span className="quick-action-title">Scan Attendance</span>
-          <span className="quick-action-description">
-            Record attendance using your lecturer's QR code.
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            setMessage(
-              "Your attendance history is displayed above. Live records are not connected yet."
-            )
-          }
-        >
-          <span className="quick-action-icon">▤</span>
-          <span className="quick-action-title">Attendance History</span>
-          <span className="quick-action-description">
-            Review your recorded class attendance.
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            setMessage(
-              `You are logged in as ${user.username} with the ${user.role} role.`
-            )
-          }
-        >
-          <span className="quick-action-icon">♙</span>
-          <span className="quick-action-title">My Profile</span>
-          <span className="quick-action-description">
-            View your account information.
-          </span>
-        </button>
-      </div>
-    </section>
-
-  </div>
-</section>
-
-
-    <section className="dashboard-section student-scan">
-      <h2>Scan Attendance QR Code</h2>
-      <p>
-        Scan your lecturer's session QR code to record your
-        attendance. QR scanning and GPS verification are
-        still being developed.
-      </p>
-      <button type="button" disabled>
-        QR Scanner Coming Soon
-      </button>
-    </section>
-  </div>
-  
-  
-)}
-
-
-          {user.role === "LECTURER" && (
-        <>
-        
-              <section className="lecturer-hero">
-                <p className="lecturer-eyebrow">LECTURER PORTAL</p>
+          {/* STUDENT DASHBOARD */}
+          {user.role === "STUDENT" && (
+            <div className="student-dashboard">
+              <section className="dashboard-section student-hero">
+                <p className="student-eyebrow">STUDENT PORTAL</p>
                 <h2>Welcome back, {user.username}!</h2>
                 <p>
-                  Manage your class sessions and monitor student
-                  attendance from one place.
+                  Manage your attendance and keep track of your classes
+                  with GeoScan Attendance Pro.
                 </p>
+              </section>
+
+              <section className="student-stats">
+                <div className="dashboard-section student-stat">
+                  <h3>Attendance Records</h3>
+                  <p className="student-stat-value">—</p>
+                  <p>Statistics are not connected yet.</p>
+                </div>
+                <div className="dashboard-section student-stat">
+                  <h3>Attendance Rate</h3>
+                  <p className="student-stat-value">—</p>
+                  <p>Statistics are not connected yet.</p>
+                </div>
+                <div className="dashboard-section student-stat">
+                  <h3>Upcoming Classes</h3>
+                  <p className="student-stat-value">—</p>
+                  <p>Class schedules are not connected yet.</p>
+                </div>
+              </section>
+
+              <section
+                className="dashboard-section"
+                id="attendance-history"
+              >
+                <h2>My Attendance History</h2>
+                <p>Review your recorded class attendance.</p>
+                <div className="attendance-table-wrapper">
+                  <table className="attendance-table">
+                    <thead>
+                      <tr>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Attendance Time</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colSpan="4" className="attendance-empty-cell">
+                          No attendance records available yet.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="dashboard-section student-scan">
+                <h2>Scan Attendance QR Code</h2>
+                <p>QR scanning and GPS verification are still being developed.</p>
+                <button type="button" disabled>
+                  QR Scanner Coming Soon
+                </button>
+              </section>
+            </div>
+          )}
+
+          {/* LECTURER DASHBOARD */}
+          {user.role === "LECTURER" && (
+            <div className="lecturer-dashboard">
+              <section className="lecturer-hero">
+                <div className="lecturer-hero-content">
+                  <span className="lecturer-eyebrow">
+                    GEOSCAN • LECTURER PORTAL
+                  </span>
+                  <h2>Welcome back, {user.username}!</h2>
+                  <p>
+                    Create class sessions and manage attendance from
+                    one place.
+                  </p>
+                  <button
+                    type="button"
+                    className="lecturer-primary-button"
+                    onClick={() => scrollToSection("create-session")}
+                  >
+                    + Create New Session
+                  </button>
+                </div>
+                <div className="lecturer-hero-icon">▦</div>
               </section>
 
               <section className="lecturer-overview">
                 <div className="dashboard-section lecturer-stat">
-                  <span className="lecturer-stat-icon">▣</span>
                   <h3>Sessions Created</h3>
-                  <p className="lecturer-stat-value">—</p>
-                  <p>Session statistics not connected yet.</p>
+                  <p className="lecturer-stat-value">
+                    {createdSession ? "1" : "0"}
+                  </p>
                 </div>
-
                 <div className="dashboard-section lecturer-stat">
-                  <span className="lecturer-stat-icon">▦</span>
                   <h3>Attendance Records</h3>
                   <p className="lecturer-stat-value">—</p>
-                  <p>Attendance totals not connected yet.</p>
                 </div>
-
                 <div className="dashboard-section lecturer-stat">
-                  <span className="lecturer-stat-icon">◷</span>
                   <h3>Upcoming Classes</h3>
                   <p className="lecturer-stat-value">—</p>
-                  <p>Class schedules not connected yet.</p>
                 </div>
               </section>
 
-              <section className="dashboard-section" id="create-session">
+              <section
+                className="dashboard-section lecturer-form-section"
+                id="create-session"
+              >
                 <h2>Create Attendance Session</h2>
+                <p>Enter your class details below.</p>
+
                 <form
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    setError("");
-                    setMessage("");
-                    setCreatedSession(null);
-                    setLoading(true);
-
-                    const form = new FormData(event.currentTarget);
-
-                    try {
-                      const response = await fetch(
-                        `${API}/attendance/sessions/`,
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            class_name: form.get("class_name"),
-                            date: form.get("date"),
-                            start_time: form.get("start_time"),
-                            end_time: form.get("end_time"),
-                          }),
-                        }
-                      );
-
-                      const data = await response.json();
-
-                      if (!response.ok) {
-                        throw new Error(
-                          data.error || "Could not create session."
-                        );
-                      }
-
-                      setCreatedSession({
-                        id: data.session_id,
-                        className: form.get("class_name"),
-                        date: form.get("date"),
-                        startTime: form.get("start_time"),
-                        endTime: form.get("end_time"),
-                      });
-
-                      setMessage(data.message);
-                      event.currentTarget.reset();
-                    } catch (err) {
-                      setError(
-                        err.message || "Cannot connect to the server."
-                      );
-                    } finally {
-                      setLoading(false);
-                    }
-                    
-                  }}
+                  className="lecturer-session-form"
+                  onSubmit={handleCreateSession}
                 >
                   <div className="form-group">
-                    <label>Class Name</label>
+                    <label htmlFor="class-name">Class Name</label>
                     <input
+                      id="class-name"
                       name="class_name"
                       type="text"
                       placeholder="e.g. Software Engineering"
                       required
                     />
                   </div>
-
                   <div className="form-group">
-                    <label>Date</label>
-                    <input name="date" type="date" required />
+                    <label htmlFor="session-date">Session Date</label>
+                    <input id="session-date" name="date" type="date" required />
                   </div>
-
                   <div className="form-group">
-                    <label>Start Time</label>
-                    <input name="start_time" type="time" required />
+                    <label htmlFor="start-time">Start Time</label>
+                    <input
+                      id="start-time"
+                      name="start_time"
+                      type="time"
+                      required
+                    />
                   </div>
-
                   <div className="form-group">
-                    <label>End Time</label>
-                    <input name="end_time" type="time" required />
+                    <label htmlFor="end-time">End Time</label>
+                    <input
+                      id="end-time"
+                      name="end_time"
+                      type="time"
+                      required
+                    />
                   </div>
-
                   <button
                     className="action-button"
                     type="submit"
                     disabled={loading}
                   >
-                    {loading ? "Creating..." : "Create Session"}
+                    {loading ? "Creating Session..." : "Create Session"}
                   </button>
                 </form>
               </section>
 
-              
               {createdSession && (
                 <section className="dashboard-section session-success-card">
-                  <div className="session-success-heading">
-                    <span className="session-success-icon">✓</span>
-                    <div>
-                      <h2>Session Created Successfully</h2>
-                      <p>Your attendance session has been created.</p>
-                    </div>
-                  </div>
-
-                  <div className="session-details-grid">
-                    <div className="session-detail">
-                      <span>Session ID</span>
-                      <strong>#{createdSession.id}</strong>
-                    </div>
-
-                    <div className="session-detail">
-                      <span>Class Name</span>
-                      <strong>{createdSession.className}</strong>
-                    </div>
-
-                    <div className="session-detail">
-                      <span>Date</span>
-                      <strong>{createdSession.date}</strong>
-                    </div>
-
-                    <div className="session-detail">
-                      <span>Start Time</span>
-                      <strong>{createdSession.startTime}</strong>
-                    </div>
-
-                    <div className="session-detail">
-                      <span>End Time</span>
-                      <strong>{createdSession.endTime}</strong>
-                    </div>
-                  </div>
-
-                  <div className="session-next-step">
-                    <strong>Next step</strong>
-                    <p>
-                      QR-code generation and live attendance monitoring
-                      still need to be implemented.
-                    </p>
-                  </div>
+                  <h2>Session Created Successfully</h2>
+                  <p>Session ID: #{createdSession.id}</p>
+                  <p>Class: {createdSession.className}</p>
+                  <p>Date: {createdSession.date}</p>
+                  <p>
+                    Time: {createdSession.startTime} – {createdSession.endTime}
+                  </p>
+                  <p>
+                    QR-code generation and live attendance monitoring
+                    still need to be implemented.
+                  </p>
                 </section>
               )}
-              
-              <section className="dashboard-section manage-sessions" id="manage-sessions">
-                <div className="manage-sessions-heading">
-                  <div>
-                    <h2>Manage Sessions</h2>
-                    <p>
-                      Review your attendance sessions and their details.
-                    </p>
-                  </div>
-                  <span className="session-count">Session list unavailable</span>
-                </div>
 
+              <section
+                className="dashboard-section manage-sessions"
+                id="manage-sessions"
+              >
+                <h2>Manage Sessions</h2>
                 {createdSession ? (
                   <div className="managed-session-card">
-                    <div className="managed-session-info">
-                      <h3>{createdSession.className}</h3>
-                      <p>Session ID: #{createdSession.id}</p>
-                      <p>Date: {createdSession.date}</p>
-                      <p>
-                        Time: {createdSession.startTime} –{" "}
-                        {createdSession.endTime}
-                      </p>
-                    </div>
-                    <span className="session-status">Created</span>
-                  </div>
-                ) : (
-                  <div className="student-empty-state">
-                    <p>No session has been created during this login yet.</p>
+                    <h3>{createdSession.className}</h3>
+                    <p>Session ID: #{createdSession.id}</p>
                     <p>
-                      Create a session above to see its details here.
+                      {createdSession.date} · {createdSession.startTime}
+                      {" – "}
+                      {createdSession.endTime}
                     </p>
                   </div>
+                ) : (
+                  <p>No sessions created during this login yet.</p>
                 )}
               </section>
+            </div>
+          )}
 
-            </>
+          {/* UNIVERSITY ADMINISTRATOR DASHBOARD */}
+          {user.role === "ADMIN" && (
+            <div className="admin-dashboard">
+              <section className="admin-welcome-card">
+                <div className="admin-welcome-content">
+                  <span className="admin-welcome-badge">
+                    ✦ UNIVERSITY ADMINISTRATION
+                  </span>
+                  <h2>Your university, at a glance.</h2>
+                  <p>
+                    Welcome back, {user.username}! Manage users and
+                    review attendance activity.
+                  </p>
+                  <button
+                    type="button"
+                    className="admin-welcome-button"
+                    onClick={() => scrollToSection("admin-users")}
+                  >
+                    Explore Management →
+                  </button>
+                </div>
+                <div className="admin-welcome-art" aria-hidden="true">
+                  <div className="admin-art-circle admin-art-circle-one" />
+                  <div className="admin-art-circle admin-art-circle-two" />
+                  <div className="admin-art-icon">🎓</div>
+                  <span className="admin-art-sparkle">✦</span>
+                  <span className="admin-art-star">✧</span>
+                </div>
+              </section>
+
+              <div className="admin-section-heading" id="admin-overview">
+                <div>
+                  <span className="admin-section-eyebrow">OVERVIEW</span>
+                  <h2>Dashboard Summary</h2>
+                  <p>Here's a snapshot of your attendance system.</p>
+                </div>
+                <span className="admin-live-label">System Overview</span>
+              </div>
+
+              <section className="admin-stats">
+                {[
+                  ["♙", "Total Students", "admin-card-purple"],
+                  ["♟", "Total Lecturers", "admin-card-blue"],
+                  ["▦", "Attendance Sessions", "admin-card-pink"],
+                  ["✓", "Attendance Records", "admin-card-green"],
+                ].map(([icon, label, color]) => (
+                  <article className={`admin-stat-card ${color}`} key={label}>
+                    <div className="admin-stat-card-top">
+                      <span className="admin-stat-icon">{icon}</span>
+                    </div>
+                    <p className="admin-stat-label">{label}</p>
+                    <h3 className="admin-stat-number">—</h3>
+                    <p className="admin-stat-footnote">
+                      Awaiting backend statistics
+                    </p>
+                  </article>
+                ))}
+              </section>
+
+              <div className="admin-content-grid">
+                <section
+                  className="admin-modern-panel admin-management-panel"
+                  id="admin-users"
+                >
+                  <div className="admin-panel-heading">
+                    <div className="admin-panel-icon admin-panel-icon-purple">
+                      ♙
+                    </div>
+                    <div>
+                      <h2>User Management</h2>
+                      <p>Manage the people using GeoScan.</p>
+                    </div>
+                  </div>
+
+                  <div className="admin-feature-row">
+                    <span className="admin-feature-icon">🎓</span>
+                    <div>
+                      <strong>Students</strong>
+                      <p>Student account management</p>
+                    </div>
+                    <span className="admin-feature-arrow">→</span>
+                  </div>
+                  <div className="admin-feature-row">
+                    <span className="admin-feature-icon">👩‍🏫</span>
+                    <div>
+                      <strong>Lecturers</strong>
+                      <p>Lecturer account management</p>
+                    </div>
+                    <span className="admin-feature-arrow">→</span>
+                  </div>
+                  <div className="admin-feature-row">
+                    <span className="admin-feature-icon">🛡️</span>
+                    <div>
+                      <strong>Administrators</strong>
+                      <p>Administrative account overview</p>
+                    </div>
+                    <span className="admin-feature-arrow">→</span>
+                  </div>
+                  <p className="admin-panel-note">
+                    User lists require connected backend endpoints.
+                  </p>
+                </section>
+
+                <section
+                  className="admin-modern-panel admin-reports-panel"
+                  id="admin-reports"
+                >
+                  <div className="admin-panel-heading">
+                    <div className="admin-panel-icon admin-panel-icon-blue">
+                      ▤
+                    </div>
+                    <div>
+                      <h2>Attendance Reports</h2>
+                      <p>Keep track of attendance performance.</p>
+                    </div>
+                  </div>
+                  <div className="admin-report-illustration">
+                    <div className="admin-report-bars">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <div className="admin-report-center">
+                      <span>📊</span>
+                    </div>
+                  </div>
+                  <div className="admin-report-caption">
+                    <strong>Insights that matter</strong>
+                    <p>
+                      Report summaries and exports require connected data.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-outline-button"
+                    onClick={() =>
+                      setMessage(
+                        "Attendance reports are awaiting backend integration."
+                      )
+                    }
+                  >
+                    View Report Status →
+                  </button>
+                </section>
+              </div>
+
+              <section
+                className="admin-modern-panel admin-activity-panel"
+                id="admin-activity"
+              >
+                <div className="admin-activity-header">
+                  <div>
+                    <span className="admin-section-eyebrow">
+                      SYSTEM MONITOR
+                    </span>
+                    <h2>Recent Activity</h2>
+                    <p>Monitor activity across the attendance system.</p>
+                  </div>
+                  <span className="admin-activity-badge">Preview</span>
+                </div>
+
+                <div className="admin-activity-list">
+                  {[
+                    ["▦", "Attendance Sessions"],
+                    ["♙", "User Registrations"],
+                    ["▤", "Attendance Reports"],
+                  ].map(([icon, title]) => (
+                    <div className="admin-activity-item" key={title}>
+                      <span className="admin-activity-icon">{icon}</span>
+                      <div className="admin-activity-description">
+                        <strong>{title}</strong>
+                        <p>Activity data is not connected yet.</p>
+                      </div>
+                      <span className="admin-activity-status">
+                        Not connected
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <footer className="admin-dashboard-footer">
+                <span className="admin-footer-mark">G</span>
+                <p>GeoScan Attendance Pro</p>
+                <span>University Administration</span>
+              </footer>
+            </div>
           )}
         </main>
       </div>
     );
   }
 
+  // LOGIN AND REGISTRATION
   return (
     <div className="app">
       <div className="login-card">
         <div className="logo">GeoScan Attendance Pro</div>
         <p className="subtitle">Smart Attendance System</p>
+
         <h2>{showRegister ? "Register" : "Login"}</h2>
 
-        {error && <p className="app-error">{error}</p>}
-        {message && <p className="app-message">{message}</p>}
+        {error && <p className="app-error" role="alert">{error}</p>}
+        {message && <p className="app-message" role="status">{message}</p>}
 
         {showRegister ? (
           <form onSubmit={handleRegister}>
             <div className="form-group">
-              <label>Full Name</label>
-              <input name="full_name" type="text" required />
+              <label htmlFor="register-full-name">Full Name</label>
+              <input
+                id="register-full-name"
+                name="full_name"
+                type="text"
+                required
+              />
             </div>
             <div className="form-group">
-              <label>Username</label>
-              <input name="username" type="text" required />
+              <label htmlFor="register-username">Username</label>
+              <input
+                id="register-username"
+                name="username"
+                type="text"
+                required
+              />
             </div>
             <div className="form-group">
-              <label>Email</label>
-              <input name="email" type="email" required />
+              <label htmlFor="register-email">Email</label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                required
+              />
             </div>
             <div className="form-group">
-              <label>Role</label>
-              <select name="role" defaultValue="STUDENT">
+              <label htmlFor="register-role">Role</label>
+              <select
+                id="register-role"
+                name="role"
+                defaultValue="STUDENT"
+              >
                 <option value="STUDENT">Student</option>
                 <option value="LECTURER">Lecturer</option>
                 <option value="ADMIN">Administrator</option>
               </select>
             </div>
             <div className="form-group">
-              <label>Password</label>
-              <input name="password" type="password" required />
+              <label htmlFor="register-password">Password</label>
+              <input
+                id="register-password"
+                name="password"
+                type="password"
+                required
+              />
             </div>
             <button
               className="login-button"
@@ -566,8 +772,9 @@ function App() {
         ) : (
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label>Login as</label>
+              <label htmlFor="login-role">Login as</label>
               <select
+                id="login-role"
                 value={loginRole}
                 onChange={(event) => setLoginRole(event.target.value)}
               >
@@ -577,12 +784,22 @@ function App() {
               </select>
             </div>
             <div className="form-group">
-              <label>Username</label>
-              <input name="username" type="text" required />
+              <label htmlFor="login-username">Username</label>
+              <input
+                id="login-username"
+                name="username"
+                type="text"
+                required
+              />
             </div>
             <div className="form-group">
-              <label>Password</label>
-              <input name="password" type="password" required />
+              <label htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                required
+              />
             </div>
             <button
               className="login-button"
@@ -599,11 +816,12 @@ function App() {
             ? "Already have an account?"
             : "Don't have an account?"}
         </p>
+
         <button
           className="register-button"
           type="button"
           onClick={() => {
-            setShowRegister(!showRegister);
+            setShowRegister((current) => !current);
             setError("");
             setMessage("");
           }}
